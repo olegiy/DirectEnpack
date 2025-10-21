@@ -717,12 +717,14 @@ proc DialogFunc wnd,msg,wParam,lParam
                    invoke SendDlgItemMessageW,[DialogWindow],1,WM_GETTEXT,bufsize/2,buf
                    call   BufStr2IntW
                    mov    [Width],eax
+                   cinvoke WritePrivateProfileStringW,iniSettingsSection,iniWidthKey,buf,iniPath
                    invoke SendDlgItemMessageW,[DialogWindow],2,WM_GETTEXT,bufsize/2,buf
                    call   BufStr2IntW
                    mov    [Height],eax
                    invoke SendDlgItemMessageW,[DialogWindow],3,WM_GETTEXT,bufsize/2,buf
                    call   BufStr2IntW
                    mov    [Span],eax
+                   cinvoke WritePrivateProfileStringW,iniSettingsSection,iniDistanceKey,buf,iniPath
                    invoke CreateThread,0,4096*1024,Pack,0,0,0
                    mov    [PackTreadHandle],rax
                    .DrawFramesChange:
@@ -734,7 +736,11 @@ proc DialogFunc wnd,msg,wParam,lParam
   .WM_INITDIALOG:mov    [DrawFrames],0
                  mov    [DialogWindow],rcx
                  invoke SendDlgItemMessageW,rcx,1,EM_SETLIMITTEXT,5,0
+                 cinvoke GetPrivateProfileStringW,iniSettingsSection,iniWidthKey,strDefaultWidth,buf,bufsize,iniPath
+                 invoke SendDlgItemMessageW,[DialogWindow],1,WM_SETTEXT,0,buf
                  invoke SendDlgItemMessageW,[DialogWindow],2,EM_SETLIMITTEXT,5,0
+                 cinvoke GetPrivateProfileStringW,iniSettingsSection,iniDistanceKey,strDefaultDistance,buf,bufsize,iniPath
+                 invoke SendDlgItemMessageW,[DialogWindow],3,WM_SETTEXT,0,buf
                  invoke SendDlgItemMessageW,[DialogWindow],3,EM_SETLIMITTEXT,3,0
                  invoke GetDlgItem,[DialogWindow],7
                  mov    [ProgressBar],rax
@@ -812,6 +818,17 @@ proc OnLoad uses rbx ;(const self:IVGAppPlugin; const _Application: IVGApplicati
   mov     rbx,rdx
   mov     [CorelApp],rdx
   comcall rbx,IVGApplication,AddRef
+  cinvoke GetModuleFileNameW,0,iniPath,bufsize
+  invoke  lstrlenW,iniPath
+  lea     rcx,[iniPath+rax*2]
+  .FindSlash:
+    cmp word[rcx],'\'
+    je @f
+    dec rcx
+  jmp .FindSlash
+  @@:
+  lea rdi,[rcx+2]
+  invoke lstrcpyW,rdi,iniFileName
   comcall rbx,IVGApplication,Get_VersionMinor,CorelVersion
   comcall rbx,IVGApplication,Get_VersionMajor,addr CorelVersion+1
 ret
@@ -890,6 +907,7 @@ endp
 
 align 16
 buf             rb 512
+iniPath         rb 512
 bufsize=$-buf
 Origin:
   .x            rq 1
