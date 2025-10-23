@@ -70,10 +70,10 @@ strStandard             du 'Standard',0
 strButtonCaption        du ' ',0
 errCPUNotSupported      du '  .  SSE 4.1.',0
 fmt                     du '%u/%u,  %u ',0
-iniFileName             du 'DirectEnpack.ini',0
-iniSettingsSection      du 'Settings',0
-iniWidthKey             du 'Width',0
-iniDistanceKey          du 'Distance',0
+; iniFileName             du 'DirectEnpack.ini',0
+; iniSettingsSection      du 'Settings',0
+; iniWidthKey             du 'Width',0
+; iniDistanceKey          du 'Distance',0
 strDefaultWidth         du '1200',0
 strDefaultDistance      du '0',0
 ICOData                 file 'icon.ico'

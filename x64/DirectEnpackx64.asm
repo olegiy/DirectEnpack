@@ -116,7 +116,7 @@ AddCorner:
     movq     xmm2,qword[corners+rax*8]
     paddd    xmm2,xmm0
     add      edx,edx
-    pshufd   xmm2,xmm2,01000100b
+    pshufd   xmm2,xmm2,0100b
     movdqa   xmm3,xmm2
     pcmpgtd  xmm2,xmm1     ;(x<=0)or(y<=0)or(C.size[0]<=x)or(C.size[1]<=y)
     pmovmskb ecx,xmm2
@@ -213,14 +213,14 @@ FindCandidates:
   je       .quit
   .ConcaveCorners:
     mov      eax,[rdi+r8-sizeof.TCorner+TCorner.type]
-    pshufd   xmm5,dqword[rdi+r8-sizeof.TCorner+TCorner.x],01000100b
+    pshufd   xmm5,dqword[rdi+r8-sizeof.TCorner+TCorner.x],0100b
     imul     edx,[rsi+TConfiguration.UnpackedRectsCount],sizeof.TSize
     shl      eax,4
     movdqa   xmm6,[mult+rax-16]
     jmp .start
     .unpackedRects:
       movq     xmm7,qword[rbx+rdx+TSize.Width]
-      pshufd   xmm1,xmm7,01000100b
+      pshufd   xmm1,xmm7,0100b
       pmulld   xmm1,xmm6
       paddd    xmm1,xmm5
       movdqa   xmm2,xmm1
@@ -481,7 +481,7 @@ proc Pack
     js @f
       invoke CreateEventW,0,0,0,0
       mov    [InThreadEvents+rbx*8],rax
-      invoke CreateEventW,0,0,0,0
+      invoke CreateEventW,0,0
       mov    [OutThreadEvents+rbx*8],rax
       invoke CreateThread,0,0,Search,rbx,0,addr ThreadIds+rbx*8
   jmp .InitConfigurations
@@ -669,7 +669,7 @@ proc Pack
       addpd    xmm3,[Origin]
       movhlps  xmm2,xmm1
       movhlps  xmm4,xmm3
-      cominvk  Layer,CreateRectangle,xmm1,xmm2,xmm3,xmm4,0,0,0,0,Shape
+      cominvk  Layer,CreateRectangle,xmm1,xmm2,xmm3,xmm4,0,0,Shape
       cominvk  Shape,Get_Outline,Outline
       cominvk  Outline,Set_Width,float [dbl_00762]
       cominvk  Outline,Release
@@ -717,14 +717,14 @@ proc DialogFunc wnd,msg,wParam,lParam
                    invoke SendDlgItemMessageW,[DialogWindow],1,WM_GETTEXT,bufsize/2,buf
                    call   BufStr2IntW
                    mov    [Width],eax
-                   cinvoke WritePrivateProfileStringW,iniSettingsSection,iniWidthKey,buf,iniPath
+                   ; cinvoke WritePrivateProfileStringW,iniSettingsSection,iniWidthKey,buf,iniPath
                    invoke SendDlgItemMessageW,[DialogWindow],2,WM_GETTEXT,bufsize/2,buf
                    call   BufStr2IntW
                    mov    [Height],eax
                    invoke SendDlgItemMessageW,[DialogWindow],3,WM_GETTEXT,bufsize/2,buf
                    call   BufStr2IntW
                    mov    [Span],eax
-                   cinvoke WritePrivateProfileStringW,iniSettingsSection,iniDistanceKey,buf,iniPath
+                   ; cinvoke WritePrivateProfileStringW,iniSettingsSection,iniDistanceKey,buf,iniPath
                    invoke CreateThread,0,4096*1024,Pack,0,0,0
                    mov    [PackTreadHandle],rax
                    .DrawFramesChange:
@@ -736,11 +736,11 @@ proc DialogFunc wnd,msg,wParam,lParam
   .WM_INITDIALOG:mov    [DrawFrames],0
                  mov    [DialogWindow],rcx
                  invoke SendDlgItemMessageW,rcx,1,EM_SETLIMITTEXT,5,0
-                 cinvoke GetPrivateProfileStringW,iniSettingsSection,iniWidthKey,strDefaultWidth,buf,bufsize,iniPath
-                 invoke SendDlgItemMessageW,[DialogWindow],1,WM_SETTEXT,0,buf
+                 ; cinvoke GetPrivateProfileStringW,iniSettingsSection,iniWidthKey,strDefaultWidth,buf,bufsize,iniPath
+                 invoke SendDlgItemMessageW,[DialogWindow],1,WM_SETTEXT,0,strDefaultWidth
                  invoke SendDlgItemMessageW,[DialogWindow],2,EM_SETLIMITTEXT,5,0
-                 cinvoke GetPrivateProfileStringW,iniSettingsSection,iniDistanceKey,strDefaultDistance,buf,bufsize,iniPath
-                 invoke SendDlgItemMessageW,[DialogWindow],3,WM_SETTEXT,0,buf
+                 ; cinvoke GetPrivateProfileStringW,iniSettingsSection,iniDistanceKey,strDefaultDistance,buf,bufsize,iniPath
+                 invoke SendDlgItemMessageW,[DialogWindow],3,WM_SETTEXT,0,strDefaultDistance
                  invoke SendDlgItemMessageW,[DialogWindow],3,EM_SETLIMITTEXT,3,0
                  invoke GetDlgItem,[DialogWindow],7
                  mov    [ProgressBar],rax
@@ -818,17 +818,22 @@ proc OnLoad uses rbx ;(const self:IVGAppPlugin; const _Application: IVGApplicati
   mov     rbx,rdx
   mov     [CorelApp],rdx
   comcall rbx,IVGApplication,AddRef
-  cinvoke GetModuleFileNameW,0,iniPath,bufsize
-  invoke  lstrlenW,iniPath
-  lea     rcx,[iniPath+rax*2]
-  .FindSlash:
-    cmp word[rcx],'\'
-    je @f
-    dec rcx
-  jmp .FindSlash
-  @@:
-  lea rdi,[rcx+2]
-  invoke lstrcpyW,rdi,iniFileName
+  ; Получаем путь к модулю, но не создаем путь к INI файлу
+  ; cinvoke GetModuleFileNameW,0,iniPath,bufsize
+  ; invoke  lstrlenW,iniPath
+  ; lea     rcx,[iniPath+rax*2]
+  ; .FindSlash:
+  ;   cmp word[rcx],'\'
+  ;   je @f
+  ;   cmp rcx,iniPath
+  ;   jbe .NoSlashFound
+  ;   sub rcx,2
+  ; jmp .FindSlash
+ ; .NoSlashFound:
+  ; lea rcx,[iniPath]
+  ; @@:
+  ; lea rdi,[rcx+2]
+  ; invoke lstrcpyW,rdi,iniFileName
   comcall rbx,IVGApplication,Get_VersionMinor,CorelVersion
   comcall rbx,IVGApplication,Get_VersionMajor,addr CorelVersion+1
 ret
